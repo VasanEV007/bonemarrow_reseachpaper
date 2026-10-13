@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pediatric BMT Survival Predictor</title>
+  <meta name="description" content="Simple, fast clinical survival prediction engine for pediatric bone marrow transplantation.">
+  
+  <!-- Modern Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Application Stylesheet -->
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <!-- =========================================================================
+       COMPACT TOP HEADER & CONTROLS
+       ========================================================================= -->
+  <header class="app-header">
+    <div class="header-inner">
+      <!-- Title & Branding -->
+      <div class="brand">
+        <div class="brand-logo">
+          <i data-lucide="activity"></i>
+        </div>
+        <div class="brand-text">
+          <h1>Pediatric BMT Survival Predictor</h1>
+          <p>Cascade-Based Input-Doubling Classifier (Izonin et al., 2025) &amp; Linear Regression</p>
+        </div>
+      </div>
+
+      <!-- Model Architecture Switcher -->
+      <div class="model-switch-group" role="radiogroup" aria-label="Select Model Architecture">
+        <button type="button" class="btn-model active" data-model="hybrid" id="btn-model-cascade">
+          <i data-lucide="git-merge"></i>
+          <span>Hybrid Cascade (PNN + RF)</span>
+        </button>
+        <button type="button" class="btn-model" data-model="linear-regression" id="btn-model-lr">
+          <i data-lucide="trending-up"></i>
+          <span>Linear Regression (OLS)</span>
+        </button>
+        <button type="button" class="btn-model" data-model="compare" id="btn-model-compare">
+          <i data-lucide="columns-2"></i>
+          <span>Compare Both</span>
+        </button>
+      </div>
+
+      <!-- Quick Action Buttons -->
+      <div class="header-actions">
+        <button type="button" class="btn-secondary" id="btn-reset-baseline" title="Reset all features to training cohort baseline">
+          <i data-lucide="rotate-ccw"></i>
+          <span>Reset Baseline</span>
+        </button>
+        <button type="button" class="btn-primary" id="btn-run-prediction">
+          <i data-lucide="zap"></i>
+          <span id="btn-run-text">Run Prediction</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       MAIN TWO-COLUMN WORKSPACE: ADJUST VALUES (LEFT) -> GET OUTPUT (RIGHT)
+       ========================================================================= -->
+  <main class="app-workspace">
+
+    <!-- ==================== LEFT COLUMN: ADJUST VALUES ==================== -->
+    <section class="panel panel-inputs" aria-labelledby="heading-inputs">
+      
+      <!-- Inputs Header & Filter Bar -->
+      <div class="panel-header">
+        <div class="panel-title-wrap">
+          <div class="panel-icon"><i data-lucide="sliders"></i></div>
+          <h2 id="heading-inputs">Clinical Features</h2>
+          <span class="badge badge-cyan" id="feature-count-badge">35 Active</span>
+        </div>
+
+        <!-- Presets & Live Toggle -->
+        <div class="panel-header-controls">
+          <label class="live-toggle" title="Automatically re-run prediction whenever any value changes">
+            <input type="checkbox" id="toggle-live-calc" checked>
+            <span class="live-toggle-slider"></span>
+            <span class="live-label">Live Calculation</span>
+          </label>
+
+          <div class="dropdown-presets">
+            <button type="button" class="btn-preset-trigger" id="btn-presets-menu">
+              <i data-lucide="sparkles"></i>
+              <span>Presets</span>
+              <i data-lucide="chevron-down" style="width: 14px; height: 14px;"></i>
+            </button>
+            <div class="preset-dropdown-menu" id="presets-dropdown">
+              <button type="button" class="preset-item" data-preset="median">
+                <i data-lucide="target"></i>
+                <div>
+                  <strong>Median Baseline</strong>
+                  <small>Standard cohort baseline</small>
+                </div>
+              </button>
+              <button type="button" class="preset-item" data-preset="survivor">
+                <i data-lucide="shield-check"></i>
+                <div>
+                  <strong>Sample Survivor</strong>
+                  <small>Favorable HLA &amp; CD34+ profile</small>
+                </div>
+              </button>
+              <button type="button" class="preset-item" data-preset="highrisk">
+                <i data-lucide="alert-triangle"></i>
+                <div>
+                  <strong>High-Risk Profile</strong>
+                  <small>Mismatched HLA &amp; advanced stage</small>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Feature Search -->
+      <div class="feature-search-wrap">
+        <i data-lucide="search" class="search-icon"></i>
+        <input type="text" id="feature-search-input" placeholder="Search features (e.g. CD34, Age, HLA, CMV, ANC, Platelet)..." autocomplete="off">
+        <button type="button" id="btn-clear-search" class="btn-clear-search" style="display: none;">&times;</button>
+      </div>
+
+      <!-- Category Filter Tabs -->
+      <div class="category-tabs" id="category-tabs-bar" role="tablist">
+        <button type="button" class="cat-tab active" data-category="all">All</button>
+        <button type="button" class="cat-tab" data-category="Demographics">Demographics</button>
+        <button type="button" class="cat-tab" data-category="Donor & Matching">Donor &amp; Match</button>
+        <button type="button" class="cat-tab" data-category="Disease & Risk">Disease &amp; Risk</button>
+        <button type="button" class="cat-tab" data-category="Histocompatibility (HLA)">HLA &amp; Bio</button>
+        <button type="button" class="cat-tab" data-category="Graft & Recovery">Graft &amp; Recovery</button>
+      </div>
+
+      <!-- Features Container (Populated dynamically from /api/schema) -->
+      <div class="features-scroll-list" id="features-container">
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Loading clinical feature definitions...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== RIGHT COLUMN: GET OUTPUT ==================== -->
+    <section class="panel panel-output" aria-labelledby="heading-output">
+
+      <div class="panel-header">
+        <div class="panel-title-wrap">
+          <div class="panel-icon"><i data-lucide="check-circle-2"></i></div>
+          <h2 id="heading-output">Prediction Output</h2>
+        </div>
+        <div class="output-status-pill" id="output-status-pill">
+          <span class="status-dot"></span>
+          <span id="output-status-text">Ready</span>
+        </div>
+      </div>
+
+      <!-- OUTPUT VIEW 1: CASCADE CLASSIFIER (PROBABILITY & STATUS) -->
+      <div class="output-content-view" id="view-output-cascade">
+        
+        <!-- Primary Hero Card: Gauge + Outcome -->
+        <div class="hero-output-card">
+          <div class="gauge-container">
+            <svg class="gauge-svg" viewBox="0 0 200 120">
+              <!-- Background Arc -->
+              <path class="gauge-track" d="M 20 105 A 80 80 0 0 1 180 105" fill="none" stroke-width="16" stroke-linecap="round"></path>
+              <!-- Colored Progress Arc -->
+              <path class="gauge-fill" id="cascade-gauge-fill" d="M 20 105 A 80 80 0 0 1 180 105" fill="none" stroke-width="16" stroke-linecap="round" stroke-dasharray="251.32" stroke-dashoffset="2.5"></path>
+            </svg>
+            <div class="gauge-center-text">
+              <span class="gauge-percent" id="out-cascade-percent">99.0%</span>
+              <span class="gauge-sublabel">Survival Likelihood</span>
+            </div>
+          </div>
+
+          <div class="outcome-badge-wrap">
+            <div class="outcome-status-badge status-survived" id="out-cascade-status-badge">
+              <i data-lucide="shield-check" id="out-cascade-status-icon"></i>
+              <span id="out-cascade-status-label">HIGH SURVIVAL LIKELIHOOD</span>
+            </div>
+            <div class="risk-tier-tag" id="out-cascade-risk-tier">Risk Stratification: Low Risk (Tier 1)</div>
+          </div>
+        </div>
+
+        <!-- Key Metrics Cards -->
+        <div class="output-cards-grid">
+          <div class="metric-card">
+            <span class="metric-label">Predicted Class</span>
+            <span class="metric-value" id="out-cascade-class">Survived (0)</span>
+            <span class="metric-sub">target: survival_status</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">P(Survival)</span>
+            <span class="metric-value color-emerald" id="out-cascade-p-surv">99.0%</span>
+            <span class="metric-sub">Plurality voting support</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">P(Mortality Risk)</span>
+            <span class="metric-value color-rose" id="out-cascade-p-dec">1.0%</span>
+            <span class="metric-sub">Estimated mortality risk</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Model Confidence</span>
+            <span class="metric-value color-cyan" id="out-cascade-conf">99.0%</span>
+            <span class="metric-sub">Classification certainty</span>
+          </div>
+        </div>
+
+        <!-- Clinical Interpretation Text Box -->
+        <div class="interpretation-box">
+          <div class="interp-header">
+            <i data-lucide="file-text"></i>
+            <span>Clinical Summary</span>
+          </div>
+          <p id="out-cascade-interp">
+            Adjust any feature on the left to immediately update this prediction.
+          </p>
+        </div>
+
+        <!-- Top Influencing Factors Summary -->
+        <div class="influencing-factors-box" id="influencing-factors-box">
+          <div class="factors-header">
+            <i data-lucide="key"></i>
+            <span>Key Clinical Factors</span>
+          </div>
+          <ul class="factors-list" id="factors-list">
+            <li><span class="factor-bullet"></span> <span id="factor-hla">HLA Matching degree is optimal.</span></li>
+            <li><span class="factor-bullet"></span> <span id="factor-cd34">CD34+ cell dosage is in standard range.</span></li>
+            <li><span class="factor-bullet"></span> <span id="factor-age">Recipient age and donor status configured.</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- OUTPUT VIEW 2: LINEAR REGRESSION (SURVIVAL TIME IN DAYS) -->
+      <div class="output-content-view" id="view-output-lr" style="display: none;">
+        
+        <!-- Primary Hero Card: Days -->
+        <div class="hero-output-card hero-lr">
+          <div class="lr-hero-badge">Model 1: Ridge Linear Regression</div>
+          <div class="lr-big-number">
+            <span id="out-lr-days">1,271</span>
+            <span class="lr-unit">Days</span>
+          </div>
+          <div class="lr-years" id="out-lr-years">≈ 3.5 Years Post-Transplant Survival</div>
+          
+          <div class="lr-ci-pill">
+            <i data-lucide="calendar"></i>
+            <span>95% Confidence Interval:</span>
+            <strong id="out-lr-ci">[954, 1,588] Days</strong>
+          </div>
+        </div>
+
+        <!-- Regression Benchmarks Grid -->
+        <div class="output-cards-grid">
+          <div class="metric-card">
+            <span class="metric-label">Model RMSE</span>
+            <span class="metric-value" id="out-lr-rmse">884.2 d</span>
+            <span class="metric-sub">Root mean square error</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Model MAE</span>
+            <span class="metric-value" id="out-lr-mae">725.6 d</span>
+            <span class="metric-sub">Mean absolute error</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Validation Set</span>
+            <span class="metric-value">30 Patients</span>
+            <span class="metric-sub">Held-out test cohort</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Target Units</span>
+            <span class="metric-value color-cyan">Days</span>
+            <span class="metric-sub">Continuous elapsed time</span>
+          </div>
+        </div>
+
+        <!-- Clinical Interpretation Text Box -->
+        <div class="interpretation-box">
+          <div class="interp-header">
+            <i data-lucide="file-text"></i>
+            <span>Survival Duration Interpretation</span>
+          </div>
+          <p id="out-lr-interp">
+            Predicts continuous post-transplant observation time using linear regression with Ridge L2 regularization.
+          </p>
+        </div>
+      </div>
+
+      <!-- OUTPUT VIEW 3: DUAL MODEL COMPARISON -->
+      <div class="output-content-view" id="view-output-compare" style="display: none;">
+        <div class="compare-dual-wrap">
+          
+          <!-- Column A: Classifier -->
+          <div class="compare-column-card">
+            <div class="compare-card-tag badge-emerald">Hybrid Cascade Classifier</div>
+            <div class="compare-hero-val" id="cmp-casc-hero">99.0%</div>
+            <div class="compare-hero-sub" id="cmp-casc-label">High Survival Likelihood</div>
+            <div class="compare-details-list">
+              <div class="cmp-row"><span>Predicted Status:</span> <strong id="cmp-casc-status">Survived (0)</strong></div>
+              <div class="cmp-row"><span>P(Survival):</span> <strong id="cmp-casc-prob">99.0%</strong></div>
+              <div class="cmp-row"><span>Target:</span> <code class="mono">survival_status</code></div>
+            </div>
+          </div>
+
+          <!-- Column B: Regression -->
+          <div class="compare-column-card">
+            <div class="compare-card-tag badge-cyan">Ridge Linear Regression</div>
+            <div class="compare-hero-val" id="cmp-lr-hero">1,271 <small>d</small></div>
+            <div class="compare-hero-sub" id="cmp-lr-sub">≈ 3.5 Years Post-Transplant</div>
+            <div class="compare-details-list">
+              <div class="cmp-row"><span>95% CI:</span> <strong id="cmp-lr-ci-val">[954, 1588] d</strong></div>
+              <div class="cmp-row"><span>Target:</span> <code class="mono">survival_time</code></div>
+              <div class="cmp-row"><span>Units:</span> <strong>Continuous days</strong></div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="interpretation-box" style="margin-top: 1rem;">
+          <div class="interp-header">
+            <i data-lucide="info"></i>
+            <span>Target Distinction Note</span>
+          </div>
+          <p style="font-size: 0.8rem; line-height: 1.5; color: var(--text-secondary);">
+            Model 1 estimates continuous lifespan post-transplant (days), while Model 2 assesses binary mortality risk (survival vs death). They address distinct clinical questions.
+          </p>
+        </div>
+      </div>
+
+      <!-- Output Footer Actions & Export -->
+      <div class="output-footer-actions">
+        <button type="button" class="btn-footer-action" id="btn-copy-summary">
+          <i data-lucide="copy"></i>
+          <span>Copy Summary</span>
+        </button>
+        <button type="button" class="btn-footer-action" id="btn-export-csv">
+          <i data-lucide="download"></i>
+          <span>Download Record CSV</span>
+        </button>
+      </div>
+
+      <div class="simple-disclaimer">
+        <i data-lucide="alert-circle" style="width: 13px; height: 13px; display: inline; vertical-align: -2px;"></i>
+        <span>Research demonstration prototype based on Izonin et al. (2025). Not certified for medical diagnosis.</span>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+  <!-- Application Logic -->
+  <script src="/js/app.js"></script>
+
+</body>
+</html>

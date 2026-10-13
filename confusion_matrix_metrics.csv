@@ -1,0 +1,3 @@
+Model,TP,FP,TN,FN,Sensitivity,Specificity,PPV,NPV
+Linear_Regression_OLS,10,2,18,0,1.0,0.9,0.8333,1.0
+Hybrid_Cascade_Input_Doubling,9,0,20,1,0.9,1.0,1.0,0.9524

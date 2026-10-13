@@ -1,0 +1,4 @@
+Model_Name,Accuracy,Accuracy_Improvement_Percent,Precision,Recall,F1_Score,MCC,Cohens_Kappa,RMSE,RMSE_Error_Reduction_Percent,MAE,MAE_Error_Reduction_Percent
+Linear_Regression_OLS,0.9333,+0.00%,0.8333,1.0,0.9091,0.866,0.8571,0.3186,+0.00%,0.2597,+0.00%
+Hybrid_Cascade_Input_Doubling,0.9333,+0.00%,1.0,0.8,0.8889,0.8528,0.8421,0.2165,+32.05%,0.0637,+75.47%
+Combined_Ensemble_Blend,0.9333,+0.00%,1.0,0.8,0.8889,0.8528,0.8421,0.2083,+34.62%,0.1408,+45.78%

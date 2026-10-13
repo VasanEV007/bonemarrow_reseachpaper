@@ -1,0 +1,148 @@
+{
+  "model_1_regression": {
+    "name": "Linear Regression (Ridge Regularized OLS)",
+    "type": "Regression",
+    "target": "survival_time",
+    "target_units": "days",
+    "rmse": 884.18,
+    "mae": 725.61,
+    "r2_score": -0.1498,
+    "training_samples": 157,
+    "test_samples": 30,
+    "training_time_sec": 0.012,
+    "top_features": [
+      {
+        "feature": "Disease_lymphoma",
+        "coefficient": -451.9,
+        "ci_lower_95": -852.14,
+        "ci_upper_95": -37.84
+      },
+      {
+        "feature": "CMVstatus",
+        "coefficient": 368.37,
+        "ci_lower_95": -54.62,
+        "ci_upper_95": 736.2
+      },
+      {
+        "feature": "Recipientage",
+        "coefficient": -344.4,
+        "ci_lower_95": -761.72,
+        "ci_upper_95": 9.13
+      },
+      {
+        "feature": "Disease_chronic",
+        "coefficient": 257.74,
+        "ci_lower_95": -56.8,
+        "ci_upper_95": 597.48
+      },
+      {
+        "feature": "RecipientCMV",
+        "coefficient": -232.82,
+        "ci_lower_95": -547.33,
+        "ci_upper_95": 172.58
+      },
+      {
+        "feature": "HLAmismatch",
+        "coefficient": 205.89,
+        "ci_lower_95": -118.58,
+        "ci_upper_95": 525.54
+      },
+      {
+        "feature": "HLAmatch",
+        "coefficient": -189.08,
+        "ci_lower_95": -709.63,
+        "ci_upper_95": 208.52
+      },
+      {
+        "feature": "Stemcellsource",
+        "coefficient": -176.25,
+        "ci_lower_95": -380.02,
+        "ci_upper_95": 28.18
+      },
+      {
+        "feature": "PLTrecovery",
+        "coefficient": -176.22,
+        "ci_lower_95": -344.81,
+        "ci_upper_95": 1.47
+      },
+      {
+        "feature": "Antigen",
+        "coefficient": 172.25,
+        "ci_lower_95": -94.13,
+        "ci_upper_95": 467.6
+      }
+    ]
+  },
+  "model_2_classification": {
+    "name": "PNN + Random Forest Cascade-Based Input-Doubling Classifier",
+    "short_name": "Hybrid Cascade Classifier (Algorithm 1)",
+    "research_reference": "Izonin et al. (2025), Computation, MDPI. DOI: 10.3390/computation13040080",
+    "type": "Binary Classification",
+    "target": "survival_status",
+    "target_classes": {
+      "0": "Survived",
+      "1": "Deceased"
+    },
+    "accuracy": 0.6667,
+    "precision": 0.5,
+    "recall": 0.5,
+    "f1_score": 0.5,
+    "mcc": 0.25,
+    "cohens_kappa": 0.25,
+    "roc_auc": 0.735,
+    "pr_auc": 0.6237,
+    "confusion_matrix": {
+      "true_negative": 15,
+      "false_positive": 5,
+      "false_negative": 5,
+      "true_positive": 5,
+      "specificity": 0.75,
+      "sensitivity": 0.5
+    },
+    "training_samples": 157,
+    "test_samples": 30,
+    "training_time_sec": 0.904,
+    "top_features": [
+      {
+        "feature": "PNN_Euclidean",
+        "importance": 0.4162
+      },
+      {
+        "feature": "PNN_Chebyshev",
+        "importance": 0.0766
+      },
+      {
+        "feature": "PNN_Cosine",
+        "importance": 0.0696
+      },
+      {
+        "feature": "CD34kgx10d6",
+        "importance": 0.041
+      },
+      {
+        "feature": "Recipientage",
+        "importance": 0.0381
+      },
+      {
+        "feature": "ANCrecovery",
+        "importance": 0.0321
+      },
+      {
+        "feature": "CD3dCD34",
+        "importance": 0.031
+      },
+      {
+        "feature": "Donorage",
+        "importance": 0.0301
+      },
+      {
+        "feature": "CD3dkgx10d8",
+        "importance": 0.0278
+      },
+      {
+        "feature": "PLTrecovery",
+        "importance": 0.0278
+      }
+    ]
+  }
+}
